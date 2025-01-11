@@ -36,7 +36,7 @@ class HScript extends Iris
 		if(hs == null)
 		{
 			trace('initializing haxe interp for: ${parent.scriptName}');
-			parent.hscript = new HScript(parent, code, varsToBring);
+			parent.hscript = new HScript(parent, code, varsToBring, true);
 		}
 		else
 		{
@@ -44,7 +44,7 @@ class HScript extends Iris
 			{
 				hs.scriptCode = code;
 				hs.varsToBring = varsToBring;
-				hs.execute();
+				hs.tryRunning();
 			}
 			catch(e:Dynamic)
 			{
@@ -55,7 +55,7 @@ class HScript extends Iris
 	#end
 
 	public var origin:String;
-	override public function new(?parent:Dynamic, ?file:String, ?varsToBring:Any = null)
+	override public function new(?parent:Dynamic, ?file:String, ?varsToBring:Any = null, ?manual:Bool = false)
 	{
 		if (file == null)
 			file = '';
@@ -98,13 +98,11 @@ class HScript extends Iris
 			this.modFolder = parent.modFolder;
 		}
 		#end
-		try {
-			preset();
-			execute();
-		} catch(e:haxe.Exception) {
-			this.destroy();
-			throw e;
-			return;
+		if (!manual) {
+			// should throw if something goes wrong
+			// bandaid fix for runHaxeCode potentially breaking later on wow I love programming @crowplexus
+			var ran:Bool = tryRunning();
+			if (!ran) return;
 		}
 		Iris.warn = function(x, ?pos:haxe.PosInfos) {
 			if (PlayState.instance != null)
@@ -122,6 +120,18 @@ class HScript extends Iris
 				PlayState.instance.addTextToDebug('[$origin]: $x', FlxColor.RED);
 			Iris.logLevel(FATAL, x, pos);
 		}
+	}
+
+	function tryRunning() {
+		try {
+			preset();
+			execute();
+			return true;
+		} catch(e:haxe.Exception) {
+			this.destroy();
+			throw e;
+		}
+		return false;
 	}
 
 	var varsToBring(default, set):Any = null;
